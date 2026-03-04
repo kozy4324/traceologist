@@ -7,6 +7,17 @@ require_relative "traceologist/version"
 module Traceologist
   class Error < StandardError; end
 
+  # A String subclass returned by {trace_sequence} that supports writing to a file with `>>`.
+  class String < ::String
+    # Writes the trace to a file. Raises if the file already exists.
+    # @param path [String] destination file path
+    def >>(other)
+      raise "A file already exists!" if File.exist?(other)
+
+      File.write(other, to_s)
+    end
+  end
+
   # Traces method call sequences within the given block using TracePoint.
   #
   # @param depth_limit [Integer] Maximum call depth to trace (default: 20)
@@ -14,11 +25,11 @@ module Traceologist
   #   starts with one of these prefixes. When nil, all calls are traced.
   # @param show_location [Boolean] Whether to include source file and line number (default: false)
   # @yield The block of code to trace
-  # @return [Array<String>] Lines representing the call sequence
+  # @return [Traceologist::String] The call sequence as a newline-joined string
   #
   # @example
   #   result = Traceologist.trace_sequence(filter: "MyClass") { MyClass.new.run }
-  #   puts result.join("\n")
+  #   puts result
   def self.trace_sequence(depth_limit: 20, filter: nil, show_location: false, &)
     Tracer.new(depth_limit: depth_limit, filter: filter, show_location: show_location).run(&)
   end
@@ -39,7 +50,7 @@ module Traceologist
     def run(&)
       trace_point = TracePoint.new(:call, :return) { |event| handle(event) }
       trace_point.enable(&)
-      @calls
+      Traceologist::String.new(@calls.join("\n"))
     end
 
     private
@@ -108,7 +119,7 @@ module Traceologist
 
     def format_value(val)
       case val
-      when Numeric, String, Symbol, NilClass, TrueClass, FalseClass
+      when Numeric, ::String, Symbol, NilClass, TrueClass, FalseClass
         val.inspect
       else
         "#{val.class}(##{assign_seq(val)})"

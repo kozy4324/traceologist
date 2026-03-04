@@ -43,8 +43,8 @@ class TestTraceologist < Minitest::Test
       calc.add(1, 2)
     end
 
-    assert_equal(1, result.count { |l| l.include?("-> ") && l.include?("#add") })
-    assert_equal(1, result.count { |l| l.include?("<- ") && l.include?("#add") })
+    assert_equal(1, result.lines.count { |l| l.include?("-> ") && l.include?("#add") })
+    assert_equal(1, result.lines.count { |l| l.include?("<- ") && l.include?("#add") })
   end
 
   def test_return_value_is_captured
@@ -53,8 +53,8 @@ class TestTraceologist < Minitest::Test
       calc.add(2, 3)
     end
 
-    return_line = result.find { |l| l.include?("=> ") }
-    assert_equal "    => 5", return_line
+    return_line = result.lines.find { |l| l.include?("=> ") }
+    assert_equal "    => 5", return_line.chomp
   end
 
   def test_positional_arguments_are_captured
@@ -63,10 +63,8 @@ class TestTraceologist < Minitest::Test
       calc.add(7, 8)
     end
 
-    arg_line = result.find { |l| l.include?("a: ") }
-    refute_nil arg_line
-    assert_match(/a: 7/, arg_line)
-    assert_match(/b: 8/, arg_line)
+    assert_match(/a: 7/, result)
+    assert_match(/b: 8/, result)
   end
 
   def test_keyword_arguments_are_captured
@@ -75,10 +73,8 @@ class TestTraceologist < Minitest::Test
       greeter.greet("Alice", loud: true)
     end
 
-    arg_line = result.find { |l| l.include?("name: ") }
-    refute_nil arg_line
-    assert_match(/name: "Alice"/, arg_line)
-    assert_match(/loud: true/, arg_line)
+    assert_match(/name: "Alice"/, result)
+    assert_match(/loud: true/, result)
   end
 
   def test_nested_calls_are_indented
@@ -87,8 +83,8 @@ class TestTraceologist < Minitest::Test
       obj.outer
     end
 
-    outer_call = result.find { |l| l.include?("-> ") && l.include?("#outer") }
-    inner_call = result.find { |l| l.include?("-> ") && l.include?("#inner") }
+    outer_call = result.lines.find { |l| l.include?("-> ") && l.include?("#outer") }
+    inner_call = result.lines.find { |l| l.include?("-> ") && l.include?("#inner") }
 
     refute_nil outer_call
     refute_nil inner_call
@@ -105,7 +101,7 @@ class TestTraceologist < Minitest::Test
       greeter.greet("Bob")
     end
 
-    call_lines = result.select { |l| l.include?("-> ") }
+    call_lines = result.lines.select { |l| l.include?("-> ") }
     assert call_lines.any? { |l| l.include?("TestTraceologist::Calculator") },
            "should include Calculator calls"
     refute call_lines.any? { |l| l.include?("TestTraceologist::Greeter") },
@@ -123,7 +119,7 @@ class TestTraceologist < Minitest::Test
       greeter.greet("Bob")
     end
 
-    call_classes = result.select { |l| l.include?("-> ") }.map { |l| l[/\w[\w:]+(?=\(#)/, 0] }
+    call_classes = result.lines.select { |l| l.include?("-> ") }.map { |l| l[/\w[\w:]+(?=\(#)/, 0] }
     assert call_classes.include?("TestTraceologist::Calculator")
     assert call_classes.include?("TestTraceologist::Greeter")
   end
@@ -137,7 +133,7 @@ class TestTraceologist < Minitest::Test
       calc.add(1, 2)
     end
 
-    call_line = result.find { |l| l.include?("-> ") && l.include?("#add") }
+    call_line = result.lines.find { |l| l.include?("-> ") && l.include?("#add") }
     assert_match(/#\s+.+\.rb:\d+/, call_line, "should include file:line comment")
   end
 
@@ -147,7 +143,7 @@ class TestTraceologist < Minitest::Test
       calc.add(1, 2)
     end
 
-    call_line = result.find { |l| l.include?("-> ") && l.include?("#add") }
+    call_line = result.lines.find { |l| l.include?("-> ") && l.include?("#add") }
     refute_match(/#\s+.+\.rb:\d+/, call_line, "should NOT include file:line comment by default")
   end
 
@@ -158,9 +154,9 @@ class TestTraceologist < Minitest::Test
       calc.multiply(3, 4)
     end
 
-    seq_numbers = result
-                  .select { |l| l.include?("-> ") }
-                  .map { |l| l[/#(\d+)\)/, 1] }
+    seq_numbers = result.lines
+                        .select { |l| l.include?("-> ") }
+                        .map { |l| l[/#(\d+)\)/, 1] }
 
     assert_equal seq_numbers.uniq.length, 1,
                  "same object should always get the same sequence number"
@@ -178,20 +174,19 @@ class TestTraceologist < Minitest::Test
       DeepRecurser.new.recurse(100)
     end
 
-    call_lines = result.select { |l| l.include?("-> ") }
+    call_lines = result.lines.select { |l| l.include?("-> ") }
     assert call_lines.length <= 4, "should stop tracing beyond depth_limit"
   ensure
     Object.send(:remove_const, :DeepRecurser) if Object.const_defined?(:DeepRecurser)
   end
 
-  def test_returns_array_of_strings
+  def test_returns_traceologist_string
     calc = Calculator.new
     result = Traceologist.trace_sequence(filter: "TestTraceologist::Calculator") do
       calc.add(1, 2)
     end
 
-    assert_instance_of Array, result
-    assert(result.all?(String))
+    assert_instance_of Traceologist::String, result
   end
 
   def test_primitive_values_are_inspected
@@ -200,7 +195,7 @@ class TestTraceologist < Minitest::Test
       calc.add(10, 20)
     end
 
-    arg_line = result.find { |l| l.include?("a: ") }
+    arg_line = result.lines.find { |l| l.include?("a: ") }
     assert_match(/a: 10/, arg_line)
   end
 
@@ -210,7 +205,34 @@ class TestTraceologist < Minitest::Test
       greeter.greet("world")
     end
 
-    return_line = result.find { |l| l.include?("=> ") }
-    assert_equal '    => "world"', return_line
+    return_line = result.lines.find { |l| l.include?("=> ") }
+    assert_equal '    => "world"', return_line.chomp
+  end
+
+  def test_right_shift_writes_to_file
+    calc = Calculator.new
+    result = Traceologist.trace_sequence(filter: "TestTraceologist::Calculator") do
+      calc.add(1, 2)
+    end
+
+    path = "/tmp/test_traceologist_#{Process.pid}.txt"
+    result >> path
+    assert File.exist?(path)
+    assert_equal result.to_s, File.read(path)
+  ensure
+    File.delete(path) if path && File.exist?(path)
+  end
+
+  def test_right_shift_raises_if_file_exists
+    calc = Calculator.new
+    result = Traceologist.trace_sequence(filter: "TestTraceologist::Calculator") do
+      calc.add(1, 2)
+    end
+
+    path = "/tmp/test_traceologist_exists_#{Process.pid}.txt"
+    File.write(path, "existing content")
+    assert_raises(RuntimeError) { result >> path }
+  ensure
+    File.delete(path) if path && File.exist?(path)
   end
 end

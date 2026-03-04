@@ -17,6 +17,10 @@ Metrics/MethodLength:
   Exclude:
     - "test/**/*"
 
+Metrics/AbcSize:
+  Exclude:
+    - "test/**/*"
+
 Naming/MethodParameterName:
   MinNameLength: 1
   AllowedNames:

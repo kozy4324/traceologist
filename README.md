@@ -40,7 +40,7 @@ result = Traceologist.trace_sequence(filter: "Order") do
   order.total
 end
 
-puts result.join("\n")
+puts result
 ```
 
 Output:
@@ -103,12 +103,18 @@ Each element of the returned array is a string. The lines follow this format:
 
 Primitive values (`Integer`, `Float`, `String`, `Symbol`, `nil`, `true`, `false`) are shown with `inspect`. All other objects are shown as `ClassName(#N)`.
 
-### Printing the result
+### Writing to a file
+
+`trace_sequence` returns a `Traceologist::String` — a plain string that also supports `>>` for writing to a file:
 
 ```ruby
 result = Traceologist.trace_sequence(filter: "MyClass") { MyClass.new.run }
-puts result.join("\n")
+
+result >> "trace.txt"       # writes to file; raises if it already exists
+puts result                 # prints to stdout like any string
 ```
+
+If the file already exists, `>>` raises a `RuntimeError` to avoid accidental overwrites.
 
 ## Development
 
