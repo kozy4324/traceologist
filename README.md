@@ -74,10 +74,10 @@ Without a filter, **all** Ruby method calls within the block are traced.
 Traceologist.trace_sequence(depth_limit: 5, filter: "MyClass") { ... }
 ```
 
-#### `show_location:` — Include source file and line number
+#### `show_locations:` — Include source file and line number
 
 ```ruby
-result = Traceologist.trace_sequence(filter: "MyClass", show_location: true) do
+result = Traceologist.trace_sequence(filter: "MyClass", show_locations: true) do
   MyClass.new.run
 end
 ```

@@ -23,23 +23,23 @@ module Traceologist
   # @param depth_limit [Integer] Maximum call depth to trace (default: 20)
   # @param filter [String, Symbol, Array<String, Symbol>, nil] Only trace classes whose name
   #   starts with one of these prefixes. When nil, all calls are traced.
-  # @param show_location [Boolean] Whether to include source file and line number (default: false)
+  # @param show_locations [Boolean] Whether to include source file and line number (default: false)
   # @yield The block of code to trace
   # @return [Traceologist::String] The call sequence as a newline-joined string
   #
   # @example
   #   result = Traceologist.trace_sequence(filter: "MyClass") { MyClass.new.run }
   #   puts result
-  def self.trace_sequence(depth_limit: 20, filter: nil, show_location: false, &)
-    Tracer.new(depth_limit: depth_limit, filter: filter, show_location: show_location).run(&)
+  def self.trace_sequence(depth_limit: 20, filter: nil, show_locations: false, &)
+    Tracer.new(depth_limit: depth_limit, filter: filter, show_locations: show_locations).run(&)
   end
 
   # @api private
   class Tracer
-    def initialize(depth_limit:, filter:, show_location:)
+    def initialize(depth_limit:, filter:, show_locations:)
       @depth_limit = depth_limit
       @filter = filter
-      @show_location = show_location
+      @show_locations = show_locations
       @depth = 0
       @call_stack = []
       @calls = []
@@ -86,7 +86,7 @@ module Traceologist
 
     def call_line(event)
       indent = "  " * @depth
-      location = @show_location ? " # #{event.path}:#{event.lineno}" : ""
+      location = @show_locations ? " # #{event.path}:#{event.lineno}" : ""
       "#{indent}-> #{label(event)}#{location}"
     end
 

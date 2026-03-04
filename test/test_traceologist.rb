@@ -124,11 +124,11 @@ class TestTraceologist < Minitest::Test
     assert call_classes.include?("TestTraceologist::Greeter")
   end
 
-  def test_show_location_adds_file_and_line
+  def test_show_locations_adds_file_and_line
     calc = Calculator.new
     result = Traceologist.trace_sequence(
       filter: "TestTraceologist::Calculator",
-      show_location: true
+      show_locations: true
     ) do
       calc.add(1, 2)
     end
@@ -137,7 +137,7 @@ class TestTraceologist < Minitest::Test
     assert_match(/#\s+.+\.rb:\d+/, call_line, "should include file:line comment")
   end
 
-  def test_show_location_is_absent_by_default
+  def test_show_locations_is_absent_by_default
     calc = Calculator.new
     result = Traceologist.trace_sequence(filter: "TestTraceologist::Calculator") do
       calc.add(1, 2)
